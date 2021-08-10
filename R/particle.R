@@ -713,11 +713,11 @@ run_deterministic_comparison <- function(data,
     ll <- ll_nbinom(deaths, Ds, obs_params$phi_death, obs_params$k_death, obs_params$exp_noise)
 
   }
-
+browser()
   # calculate ll for the seroprevalence
   lls <- 0
-  if("sero_df" %in% obs_params && "sero_det" %in% obs_params) {
-
+  if("sero_df" %in% names(obs_params) && "sero_det" %in% names(obs_params)) {
+browser()
     sero_df <- obs_params$sero_df
     sero_det <- obs_params$sero_det
 
@@ -742,8 +742,9 @@ run_deterministic_comparison <- function(data,
     # dates of incidence, pop size and dates of sero surveys
     dates <- data$date[[1]] + seq_len(nrow(out)) - 1L
     N <- sum(model_params$population)
+    sero_df$date_end <- as.Date(sero_df$date_end); sero_df$date_start <- as.Date(sero_df$date_start)
     sero_dates <- list(sero_df$date_end, sero_df$date_start, sero_df$date_start + as.integer((sero_df$date_end - sero_df$date_start)/2))
-    unq_sero_dates <- unique(c(sero_df$date_end, sero_df$date_start, sero_df$date_start + as.integer((sero_df$date_end - sero_df$date_start)/2)))
+    unq_sero_dates <- unique(c(sero_df$date_end, sero_df$date_start, sero_df$date_start + as.integer((as.Date(sero_df$date_end) - as.Date(sero_df$date_start))/2)))
     det <- obs_params$sero_det
 
     # estimate model seroprev
@@ -751,7 +752,51 @@ run_deterministic_comparison <- function(data,
     sero_model_mat <- do.call(cbind,lapply(sero_dates, function(x) {sero_model[match(x, unq_sero_dates)]}))
 
     # likelihood of model obvs
-    lls <- rowMeans(dbinom(sero_df$sero_pos, sero_df$samples, sero_model_mat, log = TRUE))
+    lls <- rowMeans(dbinom(as.integer(sero_df$sero_pos), sero_df$samples, sero_model_mat, log = TRUE))
+
+    }
+
+  }
+
+  # calculate ll for the pcr prevalence
+  llp <- 0
+  if("pcr_df" %in% names(obs_params) && "pcr_det" %in% names(obs_params)) {
+browser()
+    pcr_df <- obs_params$pcr_df
+    pcr_det <- obs_params$pcr_det
+
+    # were there actually seroprevalence data points to compare against
+    if(nrow(pcr_df) > 0) {
+
+      pcr_at_date <- function(date, symptoms, det, dates, N) {
+
+        di <- which(dates == date)
+        if(length(di) > 0) {
+          to_sum <- tail(symptoms[seq_len(di)], length(det))
+          min(sum(rev(to_sum)*head(det, length(to_sum)), na.rm=TRUE)/N, 0.99)
+        } else {
+          0
+        }
+
+      }
+
+      # get symptom incidence
+      symptoms <- rowSums(out[,index$E2]) * model_params$gamma_E
+
+      # dates of incidence, pop size and dates of pcr surveys
+      dates <- data$date[[1]] + seq_len(nrow(out)) - 1L
+      N <- sum(model_params$population)
+      pcr_df$date_end <- as.Date(pcr_df$date_end); pcr_df$date_start <- as.Date(pcr_df$date_start)
+      pcr_dates <- list(pcr_df$date_end, pcr_df$date_start, pcr_df$date_start + as.integer((pcr_df$date_end - sero_df$date_start)/2))
+      unq_pcr_dates <- unique(c(pcr_df$date_end, pcr_df$date_start, pcr_df$date_start + as.integer((pcr_df$date_end - pcr_df$date_start)/2)))
+      det <- obs_params$pcr_det
+
+      # estimate model pcr prev
+      pcr_model <- vapply(unq_pcr_dates, pcr_at_date, numeric(1), symptoms, det, dates, N)
+      pcr_model_mat <- do.call(cbind,lapply(pcr_dates, function(x) {pcr_model[match(x, unq_pcr_dates)]}))
+
+      # likelihood of model obvs
+      llp <- rowMeans(dbinom(as.integer(pcr_df$pcr_pos), pcr_df$samples, pcr_model_mat, log = TRUE))
 
     }
 
@@ -761,10 +806,10 @@ run_deterministic_comparison <- function(data,
   date <- data$date[[1]] + seq_len(nrow(out)) - 1L
   rownames(out) <- as.character(date)
   attr(out, "date") <- date
-
+browser()
   # format similar to particle_filter nomenclature
   pf_results <- list()
-  pf_results$log_likelihood <- sum(ll) + sum(lls)
+  pf_results$log_likelihood <- sum(ll) + 10*sum(lls) + sum(llp)
 
   # single returns final state
   if (save_history) {
