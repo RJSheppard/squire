@@ -572,13 +572,13 @@ pmcmc <- function(data,
     log_prior <- function(pars) log(1e-10)
   }
   calc_lprior <- log_prior
-
+browser()
   if(is.null(log_likelihood)) {
     log_likelihood <- calc_loglikelihood
   } else if (!('...' %in% names(formals(log_likelihood)))){
     stop('log_likelihood function must be able to take unnamed arguments')
   }
-
+browser()
   # create shorthand function to calc_ll given main inputs
   calc_ll <- function(pars) {
     X <- log_likelihood(pars = pars,
@@ -611,7 +611,7 @@ pmcmc <- function(data,
       force(gibbs_days)
       run_mcmc_chain_gibbs(..., gibbs_days = gibbs_days)
     }
-  } else {
+  } else {browser()
     run_mcmc_func <- run_mcmc_chain
   }
 
@@ -627,7 +627,7 @@ pmcmc <- function(data,
   #--------------------------------------------------------
   # Section 2 of pMCMC Wrapper: Run pMCMC
   #--------------------------------------------------------
-
+browser()
   # Run the chains in parallel
   message("Running pMCMC...")
   if (Sys.getenv("SQUIRE_PARALLEL_DEBUG") == "TRUE") {
@@ -669,7 +669,7 @@ pmcmc <- function(data,
       pars_max = pars_max,
       .progress = TRUE,
       .options = furrr::furrr_options(seed = NULL))
-
+browser()
   }
 
   #----------------
@@ -1282,7 +1282,7 @@ calc_loglikelihood <- function(pars, data, squire_model, model_params,
                                pars_obs, n_particles,
                                forecast_days = 0, return = "ll",
                                Rt_args,
-                               interventions) {
+                               interventions) {browser()
   #----------------..
   # specify particle setup
   #----------------..
@@ -1484,7 +1484,7 @@ calc_loglikelihood <- function(pars, data, squire_model, model_params,
                                      return = pf_return)
 
   } else if (inherits(squire_model, "deterministic")) {
-
+browser()
     pf_result <- run_deterministic_comparison(data = data,
                                               squire_model = squire_model,
                                               model_params = model_params,
