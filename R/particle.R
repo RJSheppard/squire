@@ -692,7 +692,17 @@ run_deterministic_comparison <- function(data,
   steps <- unique(c(steps,fore_steps))
 
   # model run
-  out <- model_func$run(t = seq(0, tail(steps,1), 1))
+  if("atol" %in% names(obs_params) && "rtol" %in% names(obs_params)) {
+    assert_numeric(obs_params$atol)
+    atol <- obs_params$atol
+    assert_numeric(obs_params$rtol)
+    rtol <- obs_params$rtol
+  } else {
+    atol <- 1e-6
+    rtol <- 1e-6
+  }
+
+  out <- model_func$run(t = seq(0, tail(steps,1), 1), atol = atol, rtol = rtol)
   index <- odin_index(model_func)
 
   # get deaths for comparison
@@ -760,7 +770,7 @@ run_deterministic_comparison <- function(data,
 
   }
 
-  # calculate ll for the seroprevalence
+  # calculate ll for the PCR prevalence
   llp <- 0
   if("pcr_df" %in% names(obs_params) && "pcr_det" %in% names(obs_params)) {
 
@@ -806,7 +816,6 @@ run_deterministic_comparison <- function(data,
 
   }
 
-
   # format the out object
   date <- data$date[[1]] + seq_len(nrow(out)) - 1L
   rownames(out) <- as.character(date)
@@ -834,7 +843,6 @@ run_deterministic_comparison <- function(data,
 
   ret
 }
-
 
 #' @noRd
 check_sero_df <- function(sero_df) {
